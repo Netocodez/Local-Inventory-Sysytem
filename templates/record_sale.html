@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-4">
+  <h3 class="mb-4">Record New Sale</h3>
+
+  {% if products|length == 0 %}
+    <div class="alert alert-warning">No products available. Please add products before recording sales.</div>
+  {% endif %}
+
+
+  <form method="POST" class="card p-4 shadow-sm">
+    
+    <div class="mb-3">
+      <label for="product_id" class="form-label">Product</label>
+      <select id="product_id" name="product_id" class="form-select" required onchange="updatePrice()">
+        {% for product in products %}
+          <option value="{{ product.id }}" data-price="{{ product.price }}" data-cost="{{ product.cost_price }}">
+            {{ product.name }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+
+
+    <div class="mb-3">
+      <label for="cost_price" class="form-label">Cost Price (Don't Sell below Cost Price)</label>
+      <input type="number" step="0.01" id="cost_price" name="cost_price" class="form-control" required readonly>
+    </div>
+
+    <div class="mb-3">
+      <label for="unit_price" class="form-label">Unit Price</label>
+      <input type="number" step="0.01" id="unit_price" name="unit_price" class="form-control" required>
+    </div>
+
+    <div class="mb-3">
+      <label for="quantity" class="form-label">Quantity</label>
+      <input type="number" id="quantity" name="quantity" min="1" class="form-control" required>
+    </div>
+
+    <div class="mb-3">
+      <label for="customer_name" class="form-label">Customer Name</label>
+      <input type="text" id="customer_name" name="customer_name" class="form-control" placeholder="Optional">
+    </div>
+
+    <div class="mb-3">
+      <label for="payment_type" class="form-label">Payment Type</label>
+      <select id="payment_type" name="payment_type" class="form-select">
+        <option value="Cash">Cash</option>
+        <option value="Card">Card</option>
+        <option value="Mobile Money">Mobile Money</option>
+        <option value="Other">Other</option>
+      </select>
+    </div>
+
+    <div class="mb-3">
+      <label for="comments" class="form-label">Comments</label>
+      <textarea id="comments" name="comments" rows="3" class="form-control" placeholder="Optional"></textarea>
+    </div>
+
+    <!--<button type="submit" class="btn btn-primary w-100">Record Sale</button>-->
+    <button type="submit" class="btn btn-primary w-100 mb-2">Record Sale</button>
+    <a href="{{ url_for('dashboard') }}" class="btn btn-secondary w-100">Cancel</a>
+  </form>
+</div>
+
+<script>
+function updatePrice() {
+  const select = document.getElementById('product_id');
+  const selectedOption = select.options[select.selectedIndex];
+
+  const price = selectedOption.getAttribute('data-price');
+  const cost = selectedOption.getAttribute('data-cost');
+
+  document.getElementById('unit_price').value = price;
+  document.getElementById('cost_price').value = cost;
+}
+
+// initialize on page load
+window.onload = updatePrice;
+</script>
+
+{% endblock %}

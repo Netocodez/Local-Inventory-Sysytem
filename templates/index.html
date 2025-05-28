@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block content %}
+<form method="get" class="mb-3">
+    <input type="text" name="q" class="form-control" placeholder="Search by name..." value="{{ request.args.get('q', '') }}">
+</form>
+<a href="{{ url_for('add_product') }}" class="btn btn-primary mb-3">Add Product</a>
+<a href="{{ url_for('restock_product') }}" class="btn btn-primary mb-3">Restock Product</a>
+
+<!-- Flash Messages -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    {% for category, message in messages %}
+      <div class="alert alert-{{ category }} alert-dismissible fade show flash-message" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+    {% endfor %}
+  {% endif %}
+{% endwith %}
+
+<table class="table table-bordered table-hover table-striped table-responsive" id="sales-table">
+    <thead class="table-success">
+        <tr>
+            <th>Name</th><th>Quantity</th><th>Cost Price</th><th>Min Selling Price</th><th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for product in products %}
+        <tr>
+            <td>{{ product.name }}</td>
+            <td>{{ product.quantity }}</td>
+            <td>${{ "%.2f"|format(product.cost_price) }}</td>
+            <td>${{ "%.2f"|format(product.price) }}</td>
+            <td>
+                <a href="{{ url_for('edit_product', id=product.id) }}" class="btn btn-sm btn-warning">Edit</a>
+                <a href="{{ url_for('delete_product', id=product.id) }}" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure?')">Delete</a>
+            </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="4">No products found.</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

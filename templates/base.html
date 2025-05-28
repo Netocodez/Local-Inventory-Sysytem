@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Inventory System</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <!-- DataTables CSS -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+
+    <!-- jQuery (required by DataTables) -->
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+
+    <!-- DataTables JS -->
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    
+</head>
+<body class="d-flex flex-column min-vh-100">
+
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-light mb-1 sticky-top">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{{ url_for('dashboard') }}">InventorySys</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+                    aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.path.startswith(url_for('dashboard')) %}active{% endif %}" href="{{ url_for('dashboard') }}">Dashboard</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.path.startswith(url_for('sales_list')) or '/sales/' in request.path %}active{% endif %}" href="{{ url_for('sales_list') }}">Sales</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.path.startswith(url_for('index')) or '/product' in request.path %}active{% endif %}" href="{{ url_for('index') }}">Products</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.path.startswith(url_for('expenses')) %}active{% endif %}" href="{{ url_for('expenses') }}">Expenses</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.path.startswith(url_for('export_reports')) %}active{% endif %}" href="{{ url_for('export_reports') }}">Export Reports</a>
+                    </li>
+
+                    {% if current_user.is_authenticated and (current_user.is_admin() or current_user.is_approver()) %}
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.path.startswith(url_for('pending_users')) %}active{% endif %}" href="{{ url_for('pending_users') }}">Pending Users</a>
+                    </li>
+                    {% endif %}
+
+                    {% if current_user.is_authenticated and current_user.is_admin() %}
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.path.startswith(url_for('manage_users')) %}active{% endif %}" href="{{ url_for('manage_users') }}">Manage Users</a>
+                    </li>
+                    {% endif %}
+
+                    {% if current_user.is_authenticated and (current_user.is_admin() or current_user.is_approver()) %}
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.path.startswith(url_for('backup.backup_page')) %}active{% endif %}" href="{{ url_for('backup.backup_page') }}">Manage Data</a>
+                    </li>
+                    {% endif %}
+                </ul>
+
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="btn btn-outline-danger" href="{{ url_for('logout') }}">Logout</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="flex-fill container mt-4 content-wrapper">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-primary text-white text-center py-3 mt-auto">
+        <div class="container">
+            <small>&copy; {{ current_year or 2025 }} InventorySys. Developed by <a href="https://netocodes.blogspot.com/">netocodes</a>.</small>
+        </div>
+    </footer>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Flash Messages -->
+    <script>
+    setTimeout(function () {
+        document.querySelectorAll('.flash-message').forEach(function(msg) {
+            msg.classList.remove('show');
+            setTimeout(() => { msg.remove(); }, 500);
+        });
+    }, 4000);
+    </script>
+    <script>
+    $(document).ready(function() {
+        $('#sales-table').DataTable({
+        pageLength: 10,
+        lengthMenu: [5, 10, 25, 50, 100]
+        // no order option specified, default sorting applies
+        });
+    });
+    </script>
+
+
+    <!-- Custom Styles -->
+    <style>
+    .flash-message {
+        transition: opacity 0.5s ease-out;
+    }
+    .flash-message:not(.show) {
+        opacity: 0;
+    }
+    .nav-link.active {
+        background-color: #007bff !important;
+        color: #fff !important;
+        border-radius: 0.25rem;
+    }
+    .nav-link.active:hover {
+        background-color: #0056b3 !important;
+    }
+    .content-wrapper {
+    margin-bottom: 3rem; /* Adds space between content and footer */
+    }
+    footer a {
+    color: #fff;          /* white color */
+    text-decoration: underline; /* optional, so users know it’s a link */
+    }
+
+    footer a:hover {
+    color: #ddd;          /* lighter gray on hover */
+    text-decoration: none; /* optional */
+    }
+    </style>
+
+</body>
+</html>

@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block content %}
+<form method="POST" class="mx-auto" style="max-width: 400px;">
+
+  <div class="mb-3">
+    <label for="product_id" class="form-label">Select product:</label>
+    <select name="product_id" id="product_id" class="form-select" required onchange="updatePrice()">
+      {% for product in products %}
+        <option value="{{ product.id }}" data-price="{{ product.price }}">{{ product.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <div class="mb-3">
+    <label for="quantity" class="form-label">Quantity to add:</label>
+    <input type="number" name="quantity" id="quantity" min="1" class="form-control" required>
+  </div>
+
+  <div class="mb-3">
+    <label for="price" class="form-label">Price per unit:</label>
+    <input type="number" step="0.01" name="price" id="price" class="form-control" required>
+  </div>
+
+  <button type="submit" class="btn btn-success me-2">Restock</button>
+  <a href="{{ url_for('index') }}" class="btn btn-secondary">Cancel</a>
+
+</form>
+
+<script>
+  function updatePrice() {
+    const select = document.getElementById('product_id');
+    const priceInput = document.getElementById('price');
+    const selectedOption = select.options[select.selectedIndex];
+    const price = selectedOption.getAttribute('data-price');
+    priceInput.value = price;
+  }
+
+  window.onload = updatePrice;
+</script>
+{% endblock %}

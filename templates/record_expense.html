@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block content %}
+<form method="POST" class="container mt-5">
+    <h3>Record Expense</h3>
+    <div class="mb-3">
+        <label>Description</label>
+        <input type="text" name="description" class="form-control" required>
+    </div>
+    <div class="mb-3">
+        <label>Amount</label>
+        <input type="number" name="amount" class="form-control" required>
+    </div>
+    <button class="btn btn-danger">Submit</button>
+</form>
+{% endblock %}

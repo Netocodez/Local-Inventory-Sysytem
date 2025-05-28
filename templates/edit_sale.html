@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Edit Sale #{{ sale.id }}</h2>
+
+<form method="post">
+    <div class="mb-3">
+        <label for="product_id" class="form-label">Product</label>
+        <select name="product_id" id="product_id" class="form-select" required>
+            {% for product in products %}
+                <option value="{{ product.id }}" {% if product.id == sale.product_id %}selected{% endif %}>
+                    {{ product.name }}
+                </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="mb-3">
+        <label for="quantity" class="form-label">Quantity</label>
+        <input type="number" name="quantity" id="quantity" class="form-control" value="{{ sale.quantity }}" required min="1" />
+    </div>
+
+    <div class="mb-3">
+        <label for="cost_price" class="form-label">Cost Price</label>
+        <input type="number" name="cost_price" id="cost_price" class="form-control" value="{{ sale.cost_price }}" step="0.01" required />
+    </div>
+
+    <div class="mb-3">
+        <label for="unit_price" class="form-label">Unit Price</label>
+        <input type="number" name="unit_price" id="unit_price" class="form-control" value="{{ sale.unit_price }}" step="0.01" required />
+    </div>
+
+    <div class="mb-3">
+        <label for="customer_name" class="form-label">Customer Name</label>
+        <input type="text" name="customer_name" id="customer_name" class="form-control" value="{{ sale.customer_name }}" />
+    </div>
+
+    <div class="mb-3">
+        <label for="payment_type" class="form-label">Payment Type</label>
+        <input type="text" name="payment_type" id="payment_type" class="form-control" value="{{ sale.payment_type }}" />
+    </div>
+
+    <div class="mb-3">
+        <label for="comments" class="form-label">Comments</label>
+        <textarea name="comments" id="comments" class="form-control">{{ sale.comments }}</textarea>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Update Sale</button>
+    <a href="{{ url_for('sales_list') }}" class="btn btn-secondary">Cancel</a>
+</form>
+{% endblock %}

@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Manage Users</h2>
+<a href="{{ url_for('register') }}" class="btn btn-primary mb-3">Add New User</a>
+<a href="{{ url_for('pending_users') }}" class="btn btn-primary mb-3">Pending User Approval</a>
+
+<!-- Flash Messages -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    {% for category, message in messages %}
+      <div class="alert alert-{{ category }} alert-dismissible fade show flash-message" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+    {% endfor %}
+  {% endif %}
+{% endwith %}
+
+<table class="table table-bordered table-hover table-striped table-responsive" id="sales-table">
+    <thead class="table-success">
+        <tr>
+            <th>Username</th>
+            <th>Full Name</th>
+            <th>email</th>
+            <th>Phone No</th>
+            <th>Role</th>
+            <th>Approved</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for user in users %}
+        <tr>
+            <td>{{ user.username }}</td>
+            <td>{{ user.full_name }}</td>
+            <td>{{ user.email }}</td>
+            <td>{{ user.phone_number }}</td>
+            <td>{{ user.role }}</td>
+            <td>{{ 'Yes' if user.is_approved else 'No' }}</td>
+            <td>
+                <a href="{{ url_for('edit_user', user_id=user.id) }}">Edit</a>
+            </td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% endblock %}
