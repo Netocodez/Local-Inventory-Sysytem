@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block content %}
+
+{% if not from_view %}
+    <div class="alert alert-success">
+        Product added successfully!
+    </div>
+{% else %}
+    <div class="alert alert-primary">
+        Viewing Barcode for Product
+    </div>
+{% endif %}
+
+{% if product %}
+    <h4>Product: {{ product.name }}</h4>
+{% endif %}
+
+<h4>Barcode:</h4>
+
+{% if barcode_exists %}
+    <img src="{{ url_for('static', filename='barcodes/' + barcode_value + '.png') }}" alt="Barcode" style="max-width: 300px;"><br><br>
+    <a href="{{ url_for('static', filename='barcodes/' + barcode_value + '.png') }}" class="btn btn-primary" download>Download Barcode</a>
+    <button onclick="window.print()" class="btn btn-info">Print Barcode</button>
+{% else %}
+    <div class="alert alert-danger">Barcode image not found for {{ barcode_value }}.</div>
+{% endif %}
+
+<a href="{{ url_for('add_product') }}" class="btn btn-success">Add Another Product</a>
+<a href="{{ url_for('index') }}" class="btn btn-secondary">Back to Inventory</a>
+
+{% endblock %}

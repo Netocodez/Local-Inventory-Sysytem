@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for, send_file, flash, abort, jsonify
-from models import db, Product, Sale, Expense, User
+from flask_migrate import Migrate
+from models import db, Product, Sale, Expense, User,  SaleTransaction
 from flask_login import LoginManager, current_user, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 import pandas as pd
@@ -7,6 +8,10 @@ from datetime import datetime, timedelta
 import io
 from functools import wraps
 from sqlalchemy import func
+import barcode
+import uuid
+import os
+from barcode.writer import ImageWriter
 from api import api 
 from backup import backup_bp
 
@@ -18,6 +23,7 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///inventory.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db.init_app(app)
+migrate = Migrate(app, db)
 
 # Register blueprint
 app.register_blueprint(api)
@@ -34,6 +40,23 @@ def load_user(user_id):
 #@app.before_first_request
 def create_tables():
     db.create_all()
+    
+
+def generate_barcode(data, filename=None, folder='static/barcodes'):
+    if not os.path.exists(folder):
+        os.makedirs(folder)
+
+    # Use Code128 because it supports letters and numbers
+    code128 = barcode.get('code128', data, writer=ImageWriter())
+
+    if not filename:
+        filename = f"{data}.png"
+    filepath = os.path.join(folder, filename)
+    
+    code128.save(filepath.replace('.png', ''))  # `save()` auto-appends `.png`
+    
+    return filepath
+
     
 def admin_required(f):
     @wraps(f)
@@ -179,6 +202,71 @@ def edit_sale(sale_id):
 
     return render_template('edit_sale.html', sale=sale, products=products)
 
+@app.route('/transaction/<int:transaction_id>/edit', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def edit_transaction(transaction_id):
+    sales = Sale.query.filter_by(transaction_id=transaction_id).all()
+    transaction = SaleTransaction.query.get_or_404(transaction_id)
+    products = Product.query.all()
+
+    if not sales:
+        flash("Transaction not found.", "danger")
+        return redirect(url_for('sales_list'))
+
+    if request.method == 'POST':
+        for sale in sales:
+            form_prefix = f"sale_{sale.id}"
+            product_id = int(request.form.get(f'{form_prefix}_product_id', sale.product_id))
+            quantity = int(request.form.get(f'{form_prefix}_quantity', sale.quantity))
+            cost_price = float(request.form.get(f'{form_prefix}_cost_price', sale.cost_price))
+            unit_price = float(request.form.get(f'{form_prefix}_unit_price', sale.unit_price))
+            customer_name = request.form.get(f'{form_prefix}_customer_name', sale.customer_name)
+            payment_type = request.form.get(f'{form_prefix}_payment_type', sale.payment_type)
+
+            product = Product.query.get_or_404(product_id)
+
+            # Stock adjustment logic
+            if sale.product_id != product_id:
+                old_product = Product.query.get(sale.product_id)
+                if old_product:
+                    old_product.quantity += sale.quantity
+
+                if product.quantity < quantity:
+                    flash(f"Insufficient stock for product {product.name}.", "danger")
+                    return redirect(request.url)
+                product.quantity -= quantity
+            else:
+                diff = quantity - sale.quantity
+                if diff > 0 and product.quantity < diff:
+                    flash(f"Insufficient stock to increase quantity for {product.name}.", "danger")
+                    return redirect(request.url)
+                product.quantity -= diff
+
+            # Update sale
+            sale.product_id = product_id
+            sale.quantity = quantity
+            sale.cost_price = cost_price
+            sale.unit_price = unit_price
+            sale.total_price = unit_price * quantity
+            sale.customer_name = customer_name or None
+            sale.payment_type = payment_type
+
+        # Save transaction-level comments
+        transaction.comments = request.form.get('transaction_comments', '')
+
+        db.session.commit()
+        flash("Transaction updated successfully!", "success")
+        return redirect(url_for('sales_list', transaction_id=transaction_id))
+
+    return render_template('edit_transaction.html',
+                           sales=sales,
+                           products=products,
+                           transaction_id=transaction_id,
+                           transaction_comments=transaction.comments)
+
+
+
 @app.route('/sale/<int:sale_id>/delete', methods=['POST'])
 @login_required
 @admin_required
@@ -195,6 +283,27 @@ def delete_sale(sale_id):
 
     flash("Sale deleted successfully!", "success")
     return redirect(url_for('sales_list'))
+
+@app.route('/transaction/<int:transaction_id>/delete', methods=['POST'])
+@login_required
+@admin_required
+def delete_transaction(transaction_id):
+    sales = Sale.query.filter_by(transaction_id=transaction_id).all()
+
+    if not sales:
+        flash("Transaction not found.", "danger")
+        return redirect(url_for('sales_list'))
+
+    for sale in sales:
+        product = Product.query.get(sale.product_id)
+        if product:
+            product.quantity += sale.quantity
+        db.session.delete(sale)
+
+    db.session.commit()
+    flash("Transaction deleted successfully!", "success")
+    return redirect(url_for('sales_list'))
+
 
 @app.route('/')
 def home():
@@ -341,26 +450,76 @@ def add_product():
         quantity = int(request.form['quantity'])
         cost_price = float(request.form['cost_price'])
         price = float(request.form['price'])
-        new_product = Product(name=name, quantity=quantity, cost_price=cost_price, price=price)
+        barcode_value = request.form.get('barcode')
+
+        if not barcode_value:
+            barcode_value = str(uuid.uuid4())[:12].upper()
+
+        new_product = Product(
+            name=name,
+            quantity=quantity,
+            cost_price=cost_price,
+            price=price,
+            barcode=barcode_value
+        )
         db.session.add(new_product)
         db.session.commit()
-        flash("Product updated successfully", "success")
-        return redirect(url_for('index'))
+
+        barcode_path = generate_barcode(barcode_value)  # Save barcode image
+
+        # Render confirmation page with barcode
+        return render_template('add_success.html', barcode_value=barcode_value)
+
     return render_template('add_product.html')
+
+@app.route('/product/<barcode_value>/barcode')
+def view_barcode(barcode_value):
+    barcode_path = os.path.join('static', 'barcodes', f'{barcode_value}.png')
+    barcode_exists = os.path.exists(barcode_path)
+
+    product = Product.query.filter_by(barcode=barcode_value).first()
+
+    return render_template(
+        'add_success.html',
+        product=product,
+        barcode_value=barcode_value,
+        barcode_exists=barcode_exists,
+        from_view=True  # distinguish from actual add
+    )
+
 
 @app.route('/edit/<int:id>', methods=['GET', 'POST'])
 @login_required
 def edit_product(id):
     product = Product.query.get_or_404(id)
+
     if request.method == 'POST':
         product.name = request.form['name']
         product.quantity = int(request.form['quantity'])
         product.cost_price = float(request.form['cost_price'])
         product.price = float(request.form['price'])
+
+        input_barcode = request.form.get('barcode', '').strip()
+
+        if not input_barcode:
+            input_barcode = str(uuid.uuid4())[:12].upper()
+
+        existing = Product.query.filter(Product.barcode == input_barcode, Product.id != product.id).first()
+        if existing:
+            flash("Error: Barcode already in use by another product.", "danger")
+            return render_template('edit_product.html', product=product)
+
+        product.barcode = input_barcode
+
+        # ✅ Generate barcode image before saving
+        generate_barcode(input_barcode)
+
         db.session.commit()
         flash("Product edited successfully", "success")
         return redirect(url_for('index'))
+
     return render_template('edit_product.html', product=product)
+
 
 @app.route('/delete/<int:id>')
 @login_required
@@ -371,47 +530,76 @@ def delete_product(id):
     flash("Product deleted successfully", "success")
     return redirect(url_for('index'))
 
+@app.route('/product/barcode/<barcode>')
+@login_required
+def get_product_by_barcode(barcode):
+    product = Product.query.filter_by(barcode=barcode).first()
+    if not product:
+        return jsonify({'error': 'Product not found'}), 404
+
+    return jsonify({
+        'id': product.id,
+        'name': product.name,
+        'price': product.price,
+        'cost_price': product.cost_price,
+        'quantity': product.quantity
+    })
+
 @app.route('/sale', methods=['GET', 'POST'])
 @login_required
 def record_sale():
     products = Product.query.all()
     if request.method == 'POST':
-        product_id = int(request.form['product_id'])
-        quantity = int(request.form['quantity'])
-        cost_price = float(request.form['cost_price'])
-        unit_price = float(request.form['unit_price'])
+        product_ids = request.form.getlist('product_id[]')
+        quantities = request.form.getlist('quantity[]')
+        cost_prices = request.form.getlist('cost_price[]')
+        unit_prices = request.form.getlist('unit_price[]')
+
         customer_name = request.form.get('customer_name', '').strip()
         payment_type = request.form.get('payment_type', 'Cash')
         comments = request.form.get('comments', '').strip()
-        # Access the current user
-        user_id = current_user.id
 
-        product = Product.query.get_or_404(product_id)
-        if product.quantity >= quantity:
-            total_price = unit_price * quantity
+        # Create the transaction header
+        transaction = SaleTransaction(
+            customer_name=customer_name or None,
+            payment_type=payment_type,
+            comments=comments or None,
+            user_id=current_user.id
+        )
+        db.session.add(transaction)
+        db.session.flush()  # Flush to get transaction.id
+
+        for i in range(len(product_ids)):
+            product = Product.query.get_or_404(int(product_ids[i]))
+            quantity = int(quantities[i])
+            cost_price = float(cost_prices[i])
+            unit_price = float(unit_prices[i])
+
+            if product.quantity < quantity:
+                db.session.rollback()
+                return f"Insufficient stock for product: {product.name}", 400
+
             sale = Sale(
-                product_id=product_id, 
-                quantity=quantity, 
-                cost_price=cost_price, 
-                unit_price=unit_price, 
-                total_price=total_price,
+                product_id=product.id,
+                quantity=quantity,
+                cost_price=cost_price,
+                unit_price=unit_price,
+                total_price=unit_price * quantity,
                 customer_name=customer_name or None,
                 payment_type=payment_type,
                 comments=comments or None,
-                user_id=user_id   # ✅ Automatically associate the logged-in user
+                user_id=current_user.id,
+                transaction_id=transaction.id
             )
             product.quantity -= quantity
             db.session.add(sale)
-            db.session.commit()
-            
-            flash("Sale recorded successfully!", "success")
-            print(f"Sale recorded by user: {sale.user.username}")
-            
-            return redirect(url_for('sales_list', sale_id=sale.id))
-        else:
-            return "Insufficient stock", 400
-        
+
+        db.session.commit()
+        flash("Sales recorded successfully!", "success")
+        return redirect(url_for('sales_list', transaction_id=transaction.id))
+
     return render_template('record_sale.html', products=products)
+
 
 @app.route('/test_user')
 @login_required
@@ -451,6 +639,22 @@ def view_receipt(sale_id):
     product = Product.query.get(sale.product_id)
     return render_template('receipt.html', sale=sale, product=product)
 
+@app.route('/receipt/transaction/<int:transaction_id>')
+@login_required
+def view_transaction_receipt(transaction_id):
+    sales = Sale.query.filter_by(transaction_id=transaction_id).all()
+    if not sales:
+        abort(404)
+
+    # Optional: Fetch extra info like the first sale's customer, payment, etc.
+    product_ids = [sale.product_id for sale in sales]
+    products = {p.id: p for p in Product.query.filter(Product.id.in_(product_ids)).all()}
+
+    return render_template('transaction_receipt.html', sales=sales, products=products)
+
+
+
+from collections import defaultdict
 
 @app.route('/sales')
 @login_required
@@ -460,36 +664,38 @@ def sales_list():
 
     if search:
         if search.isdigit():
-            # Search by Sale ID or product name
             sales_query = sales_query.filter(
-                (Sale.id == int(search)) | 
+                (Sale.transaction_id == int(search)) |
                 (Product.name.ilike(f"%{search}%"))
             )
         else:
-            # Only search by product name
             sales_query = sales_query.filter(Product.name.ilike(f"%{search}%"))
 
-    sales_query = sales_query.order_by(Sale.timestamp.desc())
+    sales_query = sales_query.order_by(Sale.transaction_id.desc(), Sale.timestamp.desc())
     sales = sales_query.all()
-    user_id = current_user.id
 
-    sales_data = []
+    # Group by transaction_id
+    grouped_sales = defaultdict(list)
     for s in sales:
-        product = Product.query.get(s.product_id)
-        sales_data.append({
-            'id': s.id,  # Add this line
-            'product_name': product.name if product else "Unknown Product",
+        grouped_sales[s.transaction_id].append({
+            'id': s.id,
+            'product_name': s.product.name if s.product else "Unknown",
             'quantity': s.quantity,
             'unit_price': s.unit_price,
             'total_price': s.total_price,
             'customer_name': s.customer_name,
             'payment_type': s.payment_type,
             'comments': s.comments,
-            'timestamp': s.timestamp.strftime("%Y-%m-%d %H:%M") if s.timestamp else '',
-            'username': s.user.username if s.user else '-'
+            'timestamp': s.timestamp,
+            'username': s.user.username if s.user else "-",
         })
 
-    return render_template('sales_list.html', sales=sales_data)
+    # Optional: Get transaction info per transaction_id
+    transactions = SaleTransaction.query.filter(SaleTransaction.id.in_(grouped_sales.keys())).all()
+    transaction_info = {t.id: t for t in transactions}
+
+    return render_template('sales_list.html', grouped_sales=grouped_sales, transaction_info=transaction_info)
+
 
 @app.route('/expense', methods=['GET', 'POST'])
 @login_required
@@ -541,6 +747,7 @@ def export_sales():
         product = Product.query.get(sale.product_id)
         data.append({
             'Sale Id': sale.id,
+            'Transaction ID': sale.transaction_id,  # ✅ Add this line
             'Product': product.name if product else 'Unknown',
             'Quantity': sale.quantity,
             'Unit Price': sale.unit_price,
@@ -585,6 +792,8 @@ def export_reports():
         # To include the end_date whole day, add one day and use less than that
         sales_query = sales_query.filter(Sale.timestamp < end_date + timedelta(days=1))
 
+    #Order by latest first
+    sales_query = sales_query.order_by(Sale.timestamp.desc(), Sale.id.desc())
     sales = sales_query.all()
 
     sales_data = []
@@ -592,11 +801,12 @@ def export_reports():
         product = Product.query.get(s.product_id)
         sales_data.append({
             'id': s.id,
+            'transaction_id': s.transaction_id,
             'product_name': product.name if product else "Unknown Product",
             'quantity': s.quantity,
             'unit_price': s.unit_price,
             'total_price': s.total_price,
-            'Comments': s.comments,
+            'comments': s.comments,
             'username': s.user.username if s.user else '',
             'timestamp': s.timestamp.strftime("%Y-%m-%d") if s.timestamp else ''
         })

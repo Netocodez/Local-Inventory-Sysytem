@@ -1,50 +1,61 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="container mt-4">
-  <h3 class="mb-4">Record New Sale</h3>
+  <h3 class="mb-4">Record New Sales</h3>
 
   {% if products|length == 0 %}
     <div class="alert alert-warning">No products available. Please add products before recording sales.</div>
   {% endif %}
 
+  <form method="POST" class="card p-4 shadow-sm" id="saleForm">
+    <div id="sales-entries">
+      <div class="sale-entry border rounded p-3 mb-3">
 
-  <form method="POST" class="card p-4 shadow-sm">
-    
-    <div class="mb-3">
-      <label for="product_id" class="form-label">Product</label>
-      <select id="product_id" name="product_id" class="form-select" required onchange="updatePrice()">
-        {% for product in products %}
-          <option value="{{ product.id }}" data-price="{{ product.price }}" data-cost="{{ product.cost_price }}">
-            {{ product.name }}
-          </option>
-        {% endfor %}
-      </select>
+        <div class="mb-4">
+          <label class="form-label">Scan or Enter Barcode</label>
+          <input type="text" class="form-control barcode-input" placeholder="Enter or scan barcode" autofocus>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Product</label>
+          <select name="product_id[]" class="form-select product-select" onchange="updatePrice(this)" required>
+            {% for product in products %}
+              <option value="{{ product.id }}" data-barcode="{{ product.barcode }}" data-price="{{ product.price }}" data-cost="{{ product.cost_price }}">
+                {{ product.name }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Cost Price</label>
+          <input type="number" step="0.01" name="cost_price[]" class="form-control cost-price" required readonly>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Unit Price</label>
+          <input type="number" step="0.01" name="unit_price[]" class="form-control unit-price" required>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Quantity</label>
+          <input type="number" name="quantity[]" min="1" class="form-control" required>
+        </div>
+
+        <button type="button" class="btn btn-danger btn-sm" onclick="removeSaleEntry(this)">Remove</button>
+      </div>
     </div>
 
+    <button type="button" class="btn btn-outline-primary mb-3" onclick="addSaleEntry()">+ Add Another Product</button>
 
     <div class="mb-3">
-      <label for="cost_price" class="form-label">Cost Price (Don't Sell below Cost Price)</label>
-      <input type="number" step="0.01" id="cost_price" name="cost_price" class="form-control" required readonly>
+      <label class="form-label">Customer Name</label>
+      <input type="text" name="customer_name" class="form-control" placeholder="Optional">
     </div>
 
     <div class="mb-3">
-      <label for="unit_price" class="form-label">Unit Price</label>
-      <input type="number" step="0.01" id="unit_price" name="unit_price" class="form-control" required>
-    </div>
-
-    <div class="mb-3">
-      <label for="quantity" class="form-label">Quantity</label>
-      <input type="number" id="quantity" name="quantity" min="1" class="form-control" required>
-    </div>
-
-    <div class="mb-3">
-      <label for="customer_name" class="form-label">Customer Name</label>
-      <input type="text" id="customer_name" name="customer_name" class="form-control" placeholder="Optional">
-    </div>
-
-    <div class="mb-3">
-      <label for="payment_type" class="form-label">Payment Type</label>
-      <select id="payment_type" name="payment_type" class="form-select">
+      <label class="form-label">Payment Type</label>
+      <select name="payment_type" class="form-select">
         <option value="Cash">Cash</option>
         <option value="Card">Card</option>
         <option value="Mobile Money">Mobile Money</option>
@@ -53,30 +64,121 @@
     </div>
 
     <div class="mb-3">
-      <label for="comments" class="form-label">Comments</label>
-      <textarea id="comments" name="comments" rows="3" class="form-control" placeholder="Optional"></textarea>
+      <label class="form-label">Comments</label>
+      <textarea name="comments" rows="3" class="form-control" placeholder="Optional"></textarea>
     </div>
 
-    <!--<button type="submit" class="btn btn-primary w-100">Record Sale</button>-->
-    <button type="submit" class="btn btn-primary w-100 mb-2">Record Sale</button>
+    <button type="submit" class="btn btn-primary w-100 mb-2">Record Sales</button>
     <a href="{{ url_for('dashboard') }}" class="btn btn-secondary w-100">Cancel</a>
   </form>
 </div>
 
 <script>
-function updatePrice() {
-  const select = document.getElementById('product_id');
-  const selectedOption = select.options[select.selectedIndex];
+function updatePrice(selectElement) {
+  const selectedOption = selectElement.options[selectElement.selectedIndex];
+  const parent = selectElement.closest('.sale-entry');
 
-  const price = selectedOption.getAttribute('data-price');
-  const cost = selectedOption.getAttribute('data-cost');
-
-  document.getElementById('unit_price').value = price;
-  document.getElementById('cost_price').value = cost;
+  parent.querySelector('.cost-price').value = selectedOption.getAttribute('data-cost');
+  parent.querySelector('.unit-price').value = selectedOption.getAttribute('data-price');
 }
 
-// initialize on page load
-window.onload = updatePrice;
-</script>
+function addSaleEntry() {
+  const container = document.getElementById("sales-entries");
+  const entry = container.querySelector(".sale-entry");
+  const clone = entry.cloneNode(true);
 
+  // Clear values
+  clone.querySelectorAll('input').forEach(input => input.value = '');
+  clone.querySelector('select').selectedIndex = 0;
+
+  container.appendChild(clone);
+  attachBarcodeHandlers();
+  updatePrice(clone.querySelector('select'));
+}
+
+function removeSaleEntry(button) {
+  const entry = button.closest('.sale-entry');
+  const container = document.getElementById("sales-entries");
+
+  if (container.querySelectorAll('.sale-entry').length > 1) {
+    container.removeChild(entry);
+  } else {
+    alert("At least one product entry is required.");
+  }
+}
+
+function attachBarcodeHandlers() {
+  const barcodeInputs = document.querySelectorAll('.barcode-input');
+
+  barcodeInputs.forEach(input => {
+    input.removeEventListener('keydown', barcodeHandler);
+    input.removeEventListener('blur', barcodeBlurHandler);
+
+    input.addEventListener('keydown', barcodeHandler);
+    input.addEventListener('blur', barcodeBlurHandler);
+  });
+}
+
+function barcodeHandler(e) {
+  if (e.key === 'Enter' || e.key === 'Tab') {
+    e.preventDefault();
+    handleBarcodeInput(this);
+  }
+}
+
+function barcodeBlurHandler(e) {
+  handleBarcodeInput(this);
+}
+
+function handleBarcodeInput(inputEl) {
+  const barcode = inputEl.value.trim();
+  if (!barcode) return;
+
+  const parent = inputEl.closest('.sale-entry');
+  const select = parent.querySelector('.product-select');
+  let matched = false;
+
+  for (let option of select.options) {
+    if (option.dataset.barcode === barcode) {
+      option.selected = true;
+      updatePrice(select);
+      parent.querySelector('input[name="quantity[]"]').value = 1;
+      inputEl.value = '';
+      matched = true;
+      break;
+    }
+  }
+
+  if (!matched) {
+    fetch(`/product/barcode/${barcode}`)
+      .then(res => {
+        if (!res.ok) throw new Error("Product not found");
+        return res.json();
+      })
+      .then(product => {
+        for (let option of select.options) {
+          if (parseInt(option.value) === product.id) {
+            option.selected = true;
+            break;
+          }
+        }
+        parent.querySelector('.cost-price').value = product.cost_price;
+        parent.querySelector('.unit-price').value = product.price;
+        parent.querySelector('input[name="quantity[]"]').value = 1;
+        updatePrice(select);
+        inputEl.value = '';
+      })
+      .catch(err => {
+        alert(err.message);
+        inputEl.value = '';
+      });
+  }
+}
+
+// Initialize on page load
+window.onload = function() {
+  document.querySelectorAll('.sale-entry select').forEach(updatePrice);
+  attachBarcodeHandlers();
+};
+</script>
 {% endblock %}

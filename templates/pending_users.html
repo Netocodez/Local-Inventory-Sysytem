@@ -59,7 +59,9 @@
 {% endwith %}
 
 {% if users %}
-  <table class="table table-bordered table-hover table-striped table-responsive" id="sales-table">
+  <!--<table class="table table-bordered table-hover table-striped table-responsive" id="sales-table">-->
+<div class="table-responsive">
+    <table id="sales-table" class="table table-bordered table-striped nowrap" style="width:100%">
     <thead class="table-success">
       <tr>
         <th>Username</th>
@@ -83,6 +85,7 @@
       {% endfor %}
     </tbody>
   </table>
+</div>
 {% else %}
   <p style="text-align:center;">No users pending approval.</p>
 {% endif %}

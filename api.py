@@ -1,5 +1,5 @@
 from flask import Blueprint, jsonify, request, flash, redirect, url_for
-from models import db, User, Product, Expense, Sale, SyncMeta
+from models import db, User, Product, Expense, Sale, SaleTransaction, SyncMeta
 from datetime import datetime
 import requests
 import pprint
@@ -15,6 +15,7 @@ MODEL_MAP = {
     "Product": Product,
     "Expense": Expense,
     "Sale":    Sale,
+    "SaleTransaction":    SaleTransaction,
 }
 
 # Map model names to plural endpoint names to match server API routes
@@ -23,6 +24,7 @@ ENDPOINT_MAP = {
     "Product": "products",
     "Expense": "expenses",
     "Sale": "sales",
+    "SaleTransaction": "saletransaction",
 }
 
 def model_to_dict(obj):

@@ -27,6 +27,7 @@ class User(db.Model, UserMixin):
 class Product(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     uuid = db.Column(db.String(36), unique=True, default=lambda: str(uuid.uuid4()))
+    barcode = db.Column(db.String(100), unique=True, nullable=True)  # <-- Add this line
     name = db.Column(db.String(100), nullable=False)
     quantity = db.Column(db.Integer, nullable=False)
     price = db.Column(db.Float, nullable=False)
@@ -67,10 +68,24 @@ class Sale(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))  # Link to User
     user = db.relationship('User', backref='sales')            # Optional: allows user.sales
     
+    # ✅ Link to SaleTransaction
+    transaction_id = db.Column(db.Integer, db.ForeignKey('sale_transaction.id'), nullable=True)
+    # The relationship now refers back as sale.sale_transaction
+
+class SaleTransaction(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    uuid = db.Column(db.String(36), unique=True, default=lambda: str(uuid.uuid4()))
+    customer_name = db.Column(db.String(120))
+    payment_type = db.Column(db.String(50))
+    comments = db.Column(db.Text)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    last_modified = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    synced = db.Column(db.Boolean, default=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+
+    sales = db.relationship('Sale', backref='sale_transaction', lazy=True)
+    
 class SyncMeta(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     last_sync = db.Column(db.DateTime)
     model_name = db.Column(db.String)  # <- This must exist if you want to access it
-
-
-

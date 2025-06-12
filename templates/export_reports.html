@@ -1,22 +1,28 @@
 {% extends "base.html" %}
 {% block content %}
-<h1>Export Reports</h1>
+<h1 class="mb-4">Export Reports</h1>
 
-<div class="filter-container">
-    <form method="get" action="{{ url_for('export_reports') }}">
-        <label for="start_date">Start Date:</label>
-        <input type="date" id="start_date" name="start_date" value="{{ start_date }}">
-        <label for="end_date">End Date:</label>
-        <input type="date" id="end_date" name="end_date" value="{{ end_date }}">
-        <button type="submit" class="filter-btn">Filter Sales</button>
-    </form>
-</div>
+<form method="get" action="{{ url_for('export_reports') }}" class="row row-cols-1 row-cols-md-auto g-3 align-items-end mb-4">
+    <div class="col">
+        <label for="start_date" class="form-label fw-bold">Start Date:</label>
+        <input type="date" id="start_date" name="start_date" class="form-control" value="{{ start_date }}">
+    </div>
+    <div class="col">
+        <label for="end_date" class="form-label fw-bold">End Date:</label>
+        <input type="date" id="end_date" name="end_date" class="form-control" value="{{ end_date }}">
+    </div>
+    <div class="col d-grid">
+        <label class="invisible">Filter</label>  <!-- invisible label keeps spacing -->
+        <button type="submit" class="btn btn-primary">Filter Sales</button>
+    </div>
+</form>
+
 
 <!-- Flash Messages -->
 {% with messages = get_flashed_messages(with_categories=true) %}
   {% if messages %}
     {% for category, message in messages %}
-      <div class="alert alert-{{ category }} alert-dismissible fade show flash-message fixed-top mx-3 mt-5" role="alert" style="z-index: 1055;">
+      <div class="alert alert-dark alert-dismissible fade show flash-message" role="alert">
         {{ message }}
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
       </div>
@@ -26,16 +32,17 @@
 
 {% if sales %}
 <div class="table-responsive">
-    <table class="table table-bordered table-striped align-middle" id="sales-table">
+    <table class="table table-bordered table-striped align-middle nowrap" id="sales-table" style="width:100%">
         <thead class="table-success">
             <tr>
                 <th>ID</th>
+                <th>Transaction ID</th>
                 <th>Product</th>
                 <th>Quantity</th>
                 <th>Unit Price</th>
                 <th>Total Price</th>
                 <th>Comments</th>
-                <th>Username</th>
+                <th>User</th>
                 <th>Date</th>
             </tr>
         </thead>
@@ -43,83 +50,25 @@
             {% for sale in sales %}
             <tr>
                 <td>{{ sale.id }}</td>
+                <td>{{ sale.transaction_id }}</td>
                 <td>{{ sale.product_name }}</td>
                 <td>{{ sale.quantity }}</td>
-                <td>{{ "%.2f"|format(sale.unit_price) }}</td>
-                <td>{{ "%.2f"|format(sale.total_price) }}</td>
-                <td>{{ sale.comments }}</td>
+                <td>₦{{ "%.2f"|format(sale.unit_price) }}</td>
+                <td>₦{{ "%.2f"|format(sale.total_price) }}</td>
+                <td>{{ sale.comments or '-' }}</td>
                 <td>{{ sale.username }}</td>
-                <td>{{ sale.timestamp }}</td>
+                <td style="white-space: nowrap;">{{ sale.timestamp }}</td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
 </div>
 {% else %}
-<p>No sales found for the selected period.</p>
+<p class="text-muted">No sales found for the selected period.</p>
 {% endif %}
 
-<a href="{{ url_for('export_sales', start_date=start_date, end_date=end_date) }}" class="btn-export">Export Filtered Sales</a>
-<a href="{{ url_for('export_products') }}" class="btn-export">Export Products</a>
-
-<style>
-    h1 {
-        margin-bottom: 20px;
-    }
-
-    .btn-export {
-        background-color: #4CAF50;
-        color: white;
-        padding: 12px 25px;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-        font-size: 16px;
-        text-decoration: none;
-        margin-right: 10px;
-    }
-
-    .btn-export:hover {
-        background-color: #45a049;
-    }
-
-    .filter-container {
-        margin-bottom: 20px;
-        background: white;
-        padding: 15px 20px;
-        box-shadow: 0 0 8px rgba(0,0,0,0.1);
-        border-radius: 5px;
-    }
-
-    label {
-        margin-right: 10px;
-        font-weight: bold;
-    }
-
-    input[type="date"] {
-        padding: 5px 8px;
-        margin-right: 20px;
-        border: 1px solid #ccc;
-        border-radius: 4px;
-    }
-
-    button.filter-btn {
-        background-color: #2196F3;
-        border: none;
-        color: white;
-        padding: 8px 16px;
-        border-radius: 4px;
-        cursor: pointer;
-        font-size: 14px;
-    }
-
-    button.filter-btn:hover {
-        background-color: #0b7dda;
-    }
-
-    /* Flash message sticky style (optional, can remove if undesired) */
-    .flash-message {
-        max-width: 600px;
-    }
-</style>
+<div class="d-flex gap-2 mt-4">
+    <a href="{{ url_for('export_sales', start_date=start_date, end_date=end_date) }}" class="btn btn-success">Export Filtered Sales</a>
+    <a href="{{ url_for('export_products') }}" class="btn btn-success">Export Products</a>
+</div>
 {% endblock %}

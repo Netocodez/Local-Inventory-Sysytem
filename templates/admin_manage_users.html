@@ -1,8 +1,11 @@
 {% extends 'base.html' %}
 {% block content %}
 <h2>Manage Users</h2>
-<a href="{{ url_for('register') }}" class="btn btn-primary mb-3">Add New User</a>
-<a href="{{ url_for('pending_users') }}" class="btn btn-primary mb-3">Pending User Approval</a>
+
+<div class="d-grid gap-2 d-md-flex justify-content-md-start mb-3">
+    <a href="{{ url_for('register') }}" class="btn btn-primary me-md-2">Add New User</a>
+    <a href="{{ url_for('pending_users') }}" class="btn btn-primary me-md-2">Pending User Approval</a>
+</div>
 
 <!-- Flash Messages -->
 {% with messages = get_flashed_messages(with_categories=true) %}

@@ -3,7 +3,9 @@
 <div class="container mt-1">
   <h3>Expenses</h3>
   
-<a href="{{ url_for('record_expense') }}" class="btn btn-danger mb-3">Add New Expense</a>
+<div class="d-grid gap-2 d-md-flex justify-content-md-start mb-3">
+    <a href="{{ url_for('record_expense') }}" class="btn btn-primary me-md-2">Add New Expense</a>
+</div>
 
 <!-- Flash Messages -->
 {% with messages = get_flashed_messages(with_categories=true) %}
@@ -18,8 +20,10 @@
 {% endwith %}
 
   {% if expenses %}
-  <table class="table table-bordered table-hover table-striped table-responsive" id="sales-table">
-    <thead class="table-success">
+  <!--<table class="table table-bordered table-hover table-striped table-responsive" id="sales-table">-->
+  <div class="table-responsive">
+      <table id="sales-table" class="table table-bordered table-striped nowrap" style="width:100%">
+      <thead class="table-success">
       <tr>
         <th>Description</th>
         <th>Amount</th>

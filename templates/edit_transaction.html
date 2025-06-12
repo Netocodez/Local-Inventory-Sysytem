@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Edit Transaction #{{ transaction_id }}</h2>
+
+<form method="post">
+    {% for sale in sales %}
+    <div class="card mb-4">
+        <div class="card-header">
+            Sale ID: {{ sale.id }}
+        </div>
+        <div class="card-body">
+            <div class="mb-3">
+                <label for="sale_{{ sale.id }}_product_id" class="form-label">Product</label>
+                <select name="sale_{{ sale.id }}_product_id" id="sale_{{ sale.id }}_product_id" class="form-select" required>
+                    {% for product in products %}
+                        <option value="{{ product.id }}" {% if product.id == sale.product_id %}selected{% endif %}>
+                            {{ product.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label for="sale_{{ sale.id }}_quantity" class="form-label">Quantity</label>
+                <input type="number" name="sale_{{ sale.id }}_quantity" id="sale_{{ sale.id }}_quantity"
+                       class="form-control" value="{{ sale.quantity }}" min="1" required>
+            </div>
+
+            <div class="mb-3">
+                <label for="sale_{{ sale.id }}_cost_price" class="form-label">Cost Price</label>
+                <input type="number" name="sale_{{ sale.id }}_cost_price" id="sale_{{ sale.id }}_cost_price"
+                       class="form-control" value="{{ sale.cost_price }}" step="0.01" required>
+            </div>
+
+            <div class="mb-3">
+                <label for="sale_{{ sale.id }}_unit_price" class="form-label">Unit Price</label>
+                <input type="number" name="sale_{{ sale.id }}_unit_price" id="sale_{{ sale.id }}_unit_price"
+                       class="form-control" value="{{ sale.unit_price }}" step="0.01" required>
+            </div>
+
+            <div class="mb-3">
+                <label for="sale_{{ sale.id }}_customer_name" class="form-label">Customer Name</label>
+                <input type="text" name="sale_{{ sale.id }}_customer_name" id="sale_{{ sale.id }}_customer_name"
+                       class="form-control" value="{{ sale.customer_name or '' }}">
+            </div>
+
+            <div class="mb-3">
+                <label for="sale_{{ sale.id }}_payment_type" class="form-label">Payment Type</label>
+                <input type="text" name="sale_{{ sale.id }}_payment_type" id="sale_{{ sale.id }}_payment_type"
+                       class="form-control" value="{{ sale.payment_type or '' }}">
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+
+    <!-- Transaction-level comments field -->
+    <div class="mb-4">
+        <label for="transaction_comments" class="form-label">Transaction Comments</label>
+        <textarea name="transaction_comments" id="transaction_comments" class="form-control" rows="3">{{ transaction_comments or '' }}</textarea>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Update Transaction</button>
+    <a href="{{ url_for('view_transaction_receipt', transaction_id=transaction_id) }}" class="btn btn-secondary">Cancel</a>
+</form>
+{% endblock %}
