@@ -45,6 +45,7 @@ class Expense(db.Model):
     uuid = db.Column(db.String(36), unique=True, default=lambda: str(uuid.uuid4()))
     description = db.Column(db.String(200), nullable=False)
     amount = db.Column(db.Float, nullable=False)
+    expense_date = db.Column(db.DateTime, nullable=False)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     last_modified = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     synced = db.Column(db.Boolean, default=False)
@@ -82,6 +83,7 @@ class SaleTransaction(db.Model):
     last_modified = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     synced = db.Column(db.Boolean, default=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    user = db.relationship('User', backref='transactions')
 
     sales = db.relationship('Sale', backref='sale_transaction', lazy=True)
     

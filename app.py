@@ -401,7 +401,13 @@ def expenses():
     if request.method == 'POST':
         description = request.form['description']
         amount = float(request.form['amount'])
-        new_expense = Expense(description=description, amount=amount)
+        expense_date_str = request.form.get('expense_date')
+        try:
+            expense_date = datetime.strptime(expense_date_str, '%Y-%m-%d').date() if expense_date_str else datetime.utcnow().date()
+        except ValueError:
+            flash("Invalid date format. Please use YYYY-MM-DD.", "danger")
+            return redirect(url_for('expenses'))
+        new_expense = Expense(description=description, amount=amount, expense_date=expense_date)
         db.session.add(new_expense)
         db.session.commit()
         flash("Expense updated successfully", "success")
@@ -416,6 +422,13 @@ def edit_expense(expense_id):
     if request.method == 'POST':
         expense.description = request.form['description']
         expense.amount = float(request.form['amount'])
+        expense_date_str = request.form.get('expense_date')
+        if expense_date_str:
+            try:
+                expense.expense_date = datetime.strptime(expense_date_str, '%Y-%m-%d').date()
+            except ValueError:
+                flash("Invalid date format. Please use YYYY-MM-DD.", "danger")
+                return render_template('edit_expense.html', expense=expense)
         db.session.commit()
         flash("Expense updated successfully", "success")
         return redirect(url_for('expenses'))
@@ -703,7 +716,12 @@ def record_expense():
     if request.method == 'POST':
         description = request.form['description']
         amount = float(request.form['amount'])
-        expense = Expense(description=description, amount=amount)
+        expense_date_str = request.form.get('expense_date')
+        try:
+            expense_date = datetime.strptime(expense_date_str, "%Y-%m-%d").date()
+        except:
+            expense_date = datetime.utcnow().date()  # Fallback
+        expense = Expense(description=description, amount=amount, expense_date=expense_date)
         db.session.add(expense)
         db.session.commit()
         flash("Expense updated successfully", "success")

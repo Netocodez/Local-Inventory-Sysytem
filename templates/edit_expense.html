@@ -13,6 +13,12 @@
       <input type="number" step="0.01" id="amount" name="amount" class="form-control" value="{{ expense.amount }}" required>
     </div>
 
+    <div class="mb-3">
+      <label for="expense_date" class="form-label">Expense Date</label>
+      <input type="date" id="expense_date" name="expense_date" class="form-control" value="{{ expense.expense_date.strftime('%Y-%m-%d') if expense.expense_date else '' }}" required>
+
+    </div>
+
     <button type="submit" class="btn btn-danger">Update</button>
     <a href="{{ url_for('expenses') }}" class="btn btn-secondary ms-2">Cancel</a>
   </form>
