@@ -2,7 +2,7 @@
 {% block content %}
 <h1 class="mb-4">Export Reports</h1>
 
-<form method="get" action="{{ url_for('export_reports') }}" class="row row-cols-1 row-cols-md-auto g-3 align-items-end mb-4">
+<form method="get" action="{{ url_for('report.export_reports') }}" class="row row-cols-1 row-cols-md-auto g-3 align-items-end mb-4">
     <div class="col">
         <label for="start_date" class="form-label fw-bold">Start Date:</label>
         <input type="date" id="start_date" name="start_date" class="form-control" value="{{ start_date }}">
@@ -36,7 +36,7 @@
         <thead class="table-success">
             <tr>
                 <th>ID</th>
-                <th>Transaction ID</th>
+                <th>Trans ID</th>
                 <th>Product</th>
                 <th>Quantity</th>
                 <th>Unit Price</th>
@@ -68,7 +68,7 @@
 {% endif %}
 
 <div class="d-flex gap-2 mt-4">
-    <a href="{{ url_for('export_sales', start_date=start_date, end_date=end_date) }}" class="btn btn-success">Export Filtered Sales</a>
-    <a href="{{ url_for('export_products') }}" class="btn btn-success">Export Products</a>
+    <a href="{{ url_for('report.export_sales', start_date=start_date, end_date=end_date) }}" class="btn btn-success">Export Filtered Sales</a>
+    <a href="{{ url_for('report.export_products') }}" class="btn btn-success">Export Products</a>
 </div>
 {% endblock %}

@@ -10,6 +10,6 @@
         <input type="text" name="barcode" class="form-control" value="{{ product.barcode or '' }}" placeholder="Leave blank to auto-generate">
     </div>
     <button type="submit" class="btn btn-primary">Update</button>
-    <a href="{{ url_for('index') }}" class="btn btn-secondary">Cancel</a>
+    <a href="{{ url_for('product.index') }}" class="btn btn-secondary">Cancel</a>
 </form>
 {% endblock %}

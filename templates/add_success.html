@@ -25,7 +25,7 @@
     <div class="alert alert-danger">Barcode image not found for {{ barcode_value }}.</div>
 {% endif %}
 
-<a href="{{ url_for('add_product') }}" class="btn btn-success">Add Another Product</a>
-<a href="{{ url_for('index') }}" class="btn btn-secondary">Back to Inventory</a>
+<a href="{{ url_for('product.add_product') }}" class="btn btn-success">Add Another Product</a>
+<a href="{{ url_for('product.index') }}" class="btn btn-secondary">Back to Inventory</a>
 
 {% endblock %}

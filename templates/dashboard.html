@@ -1,107 +1,227 @@
 {% extends "base.html" %}
 {% block content %}
-<html>
-<head>
-  <title>Dashboard</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-</head>
-<body class="p-2">
-  <h2>Dashboard</h2>
-  <p>Welcome, {{ current_user.username }}! <a href="{{ url_for('logout') }}">Logout</a></p>
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4">
+  <div>
+    <h2 class="mb-2 mb-md-0">Dashboard</h2>
+    <p class="mb-0">Welcome, {{ current_user.username }}! <a href="{{ url_for('auth.logout') }}">Logout</a></p>
+  </div>
+  <form method="get" class="row g-2 ms-md-3">
+    <div class="col-auto">
+      <input type="date" class="form-control" name="start" value="{{ request.args.get('start', '') }}" placeholder="Start date">
+    </div>
+    <div class="col-auto">
+      <input type="date" class="form-control" name="end" value="{{ request.args.get('end', '') }}" placeholder="End date">
+    </div>
+    <div class="col-auto">
+      <button type="submit" class="btn btn-primary">Filter</button>
+    </div>
+  </form>
+</div>
 
-  <div class="row text-center">
-    <div class="col-md-3 mb-3">
-      <div class="card p-3 bg-success text-white">
-        <h5>Total Sales</h5>
-        <h3>₦{{ total_sales }}</h3>
-      </div>
-    </div>
-    <div class="col-md-3 mb-3">
-      <div class="card p-3 bg-primary text-white">
-        <h5>Available Stock</h5>
-        <h3>{{ total_stock }} items</h3>
-      </div>
-    </div>
-    <div class="col-md-3 mb-3">
-      <div class="card p-3 bg-danger text-white">
-        <h5>Total Expenses</h5>
-        <h3>₦{{ total_expenses }}</h3>
-      </div>
-    </div>
-    <div class="col-md-3 mb-3">
-      <div class="card p-3 bg-warning text-dark">
-        <h5>Profit</h5>
-        <h3>₦{{ profit }}</h3>
-      </div>
+<!-- Metric Cards -->
+<div class="row text-center">
+  <div class="col-md-4 mb-3">
+    <div class="card p-3 bg-success text-white">
+      <h5><i class="bi bi-cash-stack"></i> Total Sales</h5>
+      <h3>₦{{ '%.2f'|format(total_sales) }}</h3>
     </div>
   </div>
+  <div class="col-md-4 mb-3">
+    <div class="card p-3 bg-info text-white">
+      <h5><i class="bi bi-box-seam"></i> COGS (Sales Cost)</h5>
+      <h3>₦{{ '%.2f'|format(total_cogs) }}</h3>
+    </div>
+  </div>
+  <div class="col-md-4 mb-3">
+    <div class="card p-3 bg-danger text-white">
+      <h5><i class="bi bi-credit-card-2-front"></i> Total Expenses</h5>
+      <h3>₦{{ '%.2f'|format(total_expenses) }}</h3>
+    </div>
+  </div>
+</div>
 
-  <canvas id="salesChart" class="mt-4"></canvas>
-  <canvas id="expensesChart" class="mt-4"></canvas>
-  <canvas id="profitChart" class="mt-4"></canvas>
+<div class="row text-center">
+  <div class="col-md-4 mb-3">
+    <div class="card p-3 bg-warning text-dark">
+      <h5><i class="bi bi-graph-up"></i> Profit</h5>
+      <h3>₦{{ '%.2f'|format(profit) }}</h3>
+    </div>
+  </div>
+  <div class="col-md-4 mb-3">
+    <div class="card p-3 bg-primary text-white">
+      <h5><i class="bi bi-archive"></i> Available Stock</h5>
+      <h3>{{ total_stock }} items</h3>
+    </div>
+  </div>
+  <div class="col-md-4 mb-3">
+    <div class="card p-3 bg-light">
+      <h5 class="text-muted"><i class="bi bi-bar-chart"></i> More Metrics</h5>
+      <h3 class="text-muted">Coming soon</h3>
+    </div>
+  </div>
+</div>
 
-  <script>
-    // Sales Chart
-    const salesCtx = document.getElementById('salesChart').getContext('2d');
-    new Chart(salesCtx, {
-      type: 'bar',
-      data: {
-        labels: ['Sales'],
-        datasets: [{
+<!-- Financial Explanation -->
+<div class="text-muted small mb-3">
+  💡 <strong>Profit</strong> = Total Sales − COGS (Cost of Goods Sold) − Expenses
+</div>
+
+<!-- Combined Chart -->
+<canvas id="combinedChart" class="mt-4"></canvas>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  const combinedCtx = document.getElementById('combinedChart').getContext('2d');
+  new Chart(combinedCtx, {
+    type: 'bar',
+    data: {
+      labels: ['Sales Summary'],
+      datasets: [
+        {
           label: 'Total Sales',
-          data: [{{ total_sales }}],
+          data: [{{ total_sales|round(2) }}],
           backgroundColor: 'rgba(40, 167, 69, 0.7)'
-        }]
-      },
-      options: {
-        responsive: true,
-        scales: {
-          y: { beginAtZero: true }
-        }
-      }
-    });
-
-    // Expenses Chart
-    const expenseCtx = document.getElementById('expensesChart').getContext('2d');
-    new Chart(expenseCtx, {
-      type: 'bar',
-      data: {
-        labels: ['Expenses'],
-        datasets: [{
-          label: 'Total Expenses',
-          data: [{{ total_expenses }}],
+        },
+        {
+          label: 'COGS',
+          data: [{{ total_cogs|round(2) }}],
+          backgroundColor: 'rgba(23, 162, 184, 0.7)'
+        },
+        {
+          label: 'Expenses',
+          data: [{{ total_expenses|round(2) }}],
           backgroundColor: 'rgba(220, 53, 69, 0.7)'
-        }]
-      },
-      options: {
-        responsive: true,
-        scales: {
-          y: { beginAtZero: true }
-        }
-      }
-    });
-
-    // Profit Chart
-    const profitCtx = document.getElementById('profitChart').getContext('2d');
-    new Chart(profitCtx, {
-      type: 'bar',
-      data: {
-        labels: ['Profit'],
-        datasets: [{
+        },
+        {
           label: 'Profit',
-          data: [{{ profit }}],
+          data: [{{ profit|round(2) }}],
           backgroundColor: 'rgba(255, 193, 7, 0.7)'
-        }]
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: {
+            callback: function(value) {
+              return '₦' + value.toLocaleString();
+            }
+          }
+        }
       },
-      options: {
-        responsive: true,
-        scales: {
-          y: { beginAtZero: true }
+      plugins: {
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              return context.dataset.label + ': ₦' + context.formattedValue;
+            }
+          }
         }
       }
-    });
-  </script>
-</body>
-</html>
+    }
+  });
+</script>
+
+<canvas id="expenseTrendChart" class="mt-5"></canvas>
+
+<script>
+  const trendCtx = document.getElementById('expenseTrendChart').getContext('2d');
+  new Chart(trendCtx, {
+    type: 'line',
+    data: {
+      labels: {{ expense_labels | tojson }},
+      datasets: [{
+        label: 'Monthly Expenses',
+        data: {{ expense_values | tojson }},
+        borderColor: 'rgba(220, 53, 69, 1)',
+        backgroundColor: 'rgba(220, 53, 69, 0.2)',
+        fill: true,
+        tension: 0.3,
+        pointRadius: 4,
+        pointHoverRadius: 6
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        title: {
+          display: true,
+          text: 'Expense Trend Over Time',
+          font: {
+            size: 18
+          }
+        },
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              return '₦' + context.formattedValue;
+            }
+          }
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: {
+            callback: function(value) {
+              return '₦' + value.toLocaleString();
+            }
+          }
+        }
+      }
+    }
+  });
+</script>
+
+<canvas id="profitTrendChart" class="mt-5"></canvas>
+<script>
+  const profitCtx = document.getElementById('profitTrendChart').getContext('2d');
+  new Chart(profitCtx, {
+    type: 'line',
+    data: {
+      labels: {{ profit_labels | tojson }},
+      datasets: [{
+        label: 'Monthly Profit',
+        data: {{ profit_values | tojson }},
+        borderColor: 'rgba(255, 193, 7, 1)',
+        backgroundColor: 'rgba(255, 193, 7, 0.2)',
+        fill: true,
+        tension: 0.3,
+        pointRadius: 4,
+        pointHoverRadius: 6
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        title: {
+          display: true,
+          text: 'Profit Trend Over Time',
+          font: {
+            size: 18
+          }
+        },
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              return '₦' + context.formattedValue;
+            }
+          }
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: {
+            callback: function(value) {
+              return '₦' + value.toLocaleString();
+            }
+          }
+        }
+      }
+    }
+  });
+</script>
 {% endblock %}
